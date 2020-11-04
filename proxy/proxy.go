@@ -4,6 +4,7 @@ import (
 	"IyovGo/conn"
 	"fmt"
 	"net/http"
+	"time"
 )
 
 type Proxy struct {
@@ -28,12 +29,23 @@ func (proxy *Proxy)ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	case http.MethodConnect: // https
 		_,_ = clientConn.Write(badGateway)
 		//_,err = clientConn.Write([]byte("暂不支持https"))
-	default : // http 不包含websocket
-		resp, err := DoRequest(req)
+	default :
+		// http
+		// todo websocket
+		resp, err := handleHTTP(req)
 		if err != nil {
 			return
 		}
 		defer resp.Body.Close()
 		resp.Write(clientConn)
 	}
+}
+
+func handleHTTP(req * http.Request) (*http.Response, error){
+	//req.RequestURI = ""
+	//return (&http.Client{Transport:transport}).Do(req)
+	return (&http.Transport{
+		DisableKeepAlives: true,
+		ResponseHeaderTimeout: 30 * time.Second,
+	}).RoundTrip(req)
 }
