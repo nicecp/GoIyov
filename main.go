@@ -1,6 +1,7 @@
-package IyovGo
+package main
 
 import (
+	"IyovGo/proxy"
 	"net/http"
 	"time"
 )
@@ -8,7 +9,7 @@ import (
 func main() {
 	server := &http.Server{
 		Addr:         ":8888",
-		Handler:      proxy,
+		Handler:      proxy.New(),
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 30 * time.Second,
 	}

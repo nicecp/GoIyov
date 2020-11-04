@@ -6,11 +6,7 @@ import (
 )
 
 type Connection struct {
-	conn net.Conn
-}
-
-func (connection *Connection) Close() {
-	_ = connection.conn.Close()
+	net.Conn
 }
 
 func HijackerConn(rw http.ResponseWriter) (*Connection,error) {
@@ -25,8 +21,4 @@ func HijackerConn(rw http.ResponseWriter) (*Connection,error) {
 	}
 
 	return &Connection{conn}, nil
-}
-
-func (connection *Connection) Write(b []byte) (int, error)  {
-	return connection.conn.Write(b)
 }
