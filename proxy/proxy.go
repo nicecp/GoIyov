@@ -23,18 +23,16 @@ type Proxy struct {
 func (proxy *Proxy)ServerHandler(rw http.ResponseWriter, req *http.Request) {
 	clientConn, err := conn.HijackerConn(rw)
 	if err != nil {
-		fmt.Println(errors.WithStack(err))
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	defer clientConn.Close()
 
 	switch req.Method {
 	case http.MethodConnect: // https
 		clientConn.Write(tunnelConnectionEstablished)
-		proxy.handleHTTPS(clientConn, req)
+		go proxy.handleHTTPS(clientConn, req)
 	default : // todo websocket
-		proxy.handleHTTP(clientConn, req)
+		go proxy.handleHTTP(clientConn, req)
 		//resp.Write(clientConn)
 		//copyHeader(rw.Header(), resp.Header)
 		//rw.WriteHeader(resp.StatusCode)
@@ -43,6 +41,7 @@ func (proxy *Proxy)ServerHandler(rw http.ResponseWriter, req *http.Request) {
 }
 
 func (proxy *Proxy)handleHTTPS(clientConn *conn.Connection,req *http.Request)  {
+	defer clientConn.Close()
 	certificate, err := cert.GetCertificate(req.URL.Host)
 	if err != nil {
 		fmt.Printf("%+v",errors.WithStack(err))
@@ -75,6 +74,7 @@ func (proxy *Proxy)handleHTTPS(clientConn *conn.Connection,req *http.Request)  {
 }
 
 func (proxy *Proxy)handleHTTP(clientConn *conn.Connection, req *http.Request){
+	defer clientConn.Close()
 	resp, err := proxy.doRequest(req)
 	if err != nil {
 		clientConn.Write(badGateway)
