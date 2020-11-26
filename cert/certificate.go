@@ -16,8 +16,8 @@ import (
 )
 
 var (
-	rootCa  *x509.Certificate
-	rootKey *rsa.PrivateKey
+	rootCa  *x509.Certificate // CA证书
+	rootKey *rsa.PrivateKey // 证书私钥
 )
 
 var certCache *cache.Cache
@@ -58,7 +58,7 @@ func generatePem(host string) ([]byte, []byte, error) {
 			CommonName:		host,
 		},
 		NotBefore:      time.Now().AddDate(-1,0,0),
-		NotAfter:       time.Now().AddDate(0,1,0),
+		NotAfter:       time.Now().AddDate(1,0,0),
 		KeyUsage:       x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature, //KeyUsage 与 ExtKeyUsage 用来表明该证书是用来做服务器认证的
 		ExtKeyUsage:    []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}, // 密钥扩展用途的序列
 		EmailAddresses: []string{"forward.nice.cp@gmail.com"},

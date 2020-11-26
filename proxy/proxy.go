@@ -8,12 +8,24 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"net/http"
+	"strings"
 	"time"
 )
 
 var (
 	tunnelConnectionEstablished = []byte("HTTP/1.1 200 Connection Established\r\n\r\n") // 通道连接建立
 	badGateway = []byte(fmt.Sprintf("HTTP/1.1 %d %s\r\n\rn", http.StatusBadGateway, http.StatusText(http.StatusBadGateway)))
+	hopToHopHeader = map[string]int{
+		"Keep-Alive":1,
+		"Transfer-Encoding":1,
+		"TE":1,
+		"Connection":1,
+		"Trailer":1,
+		"Upgrade":1,
+		"Proxy-Authorization":1,
+		"Proxy-Authenticate":1,
+	}
+	customerHopHeader = "Connection" // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers
 )
 
 type Proxy struct {
@@ -69,6 +81,7 @@ func (proxy *Proxy)handleHTTPS(clientConn *conn.Connection,req *http.Request)  {
 		clientConn.Write(badGateway)
 		return
 	}
+
 	defer resp.Body.Close()
 	resp.Write(tlsConn)
 }
@@ -86,16 +99,23 @@ func (proxy *Proxy)handleHTTP(clientConn *conn.Connection, req *http.Request){
 
 // 请求目标服务器
 func (proxy *Proxy)doRequest(req *http.Request) (*http.Response, error) {
+	removeHopHeader(req)
 	return (&http.Transport{
 		DisableKeepAlives: true,
 		ResponseHeaderTimeout: 30 * time.Second,
 	}).RoundTrip(req)
 }
-// 浅拷贝
-func copyHeader(dst, src http.Header) {
-	for k,v := range src {
-		for _, val := range v {
-			dst.Add(k, val)
+
+// remove hop header
+func removeHopHeader(req *http.Request) {
+	for k, v := range req.Header {
+		if strings.EqualFold(k, customerHopHeader) {
+			for _, customerHeader := range strings.Split(v[0], ",") {
+				req.Header.Del(strings.Trim(customerHeader, " "))
+			}
+		}
+		if _, ok := hopToHopHeader[k]; ok {
+			req.Header.Del(k)
 		}
 	}
 }
