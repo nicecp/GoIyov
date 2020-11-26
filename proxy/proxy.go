@@ -15,17 +15,17 @@ import (
 var (
 	tunnelConnectionEstablished = []byte("HTTP/1.1 200 Connection Established\r\n\r\n") // 通道连接建立
 	badGateway = []byte(fmt.Sprintf("HTTP/1.1 %d %s\r\n\rn", http.StatusBadGateway, http.StatusText(http.StatusBadGateway)))
-	hopToHopHeader = map[string]int{
-		"Keep-Alive":1,
-		"Transfer-Encoding":1,
-		"TE":1,
-		"Connection":1,
-		"Trailer":1,
-		"Upgrade":1,
-		"Proxy-Authorization":1,
-		"Proxy-Authenticate":1,
+	hopToHopHeader = []string{ // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers
+		"Keep-Alive",
+		"Transfer-Encoding",
+		"TE",
+		"Connection",
+		"Trailer",
+		"Upgrade",
+		"Proxy-Authorization",
+		"Proxy-Authenticate",
+		"Connection",
 	}
-	customerHopHeader = "Connection" // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers
 )
 
 type Proxy struct {
@@ -108,14 +108,14 @@ func (proxy *Proxy)doRequest(req *http.Request) (*http.Response, error) {
 
 // remove hop header
 func removeHopHeader(req *http.Request) {
-	for k, v := range req.Header {
-		if strings.EqualFold(k, customerHopHeader) {
-			for _, customerHeader := range strings.Split(v[0], ",") {
-				req.Header.Del(strings.Trim(customerHeader, " "))
+	for _, hop := range hopToHopHeader {
+		if value := req.Header.Get(hop); len(value) != 0 {
+			if strings.EqualFold(hop, "Connection") {
+				for _, customerHeader := range strings.Split(value, ",") {
+					req.Header.Del(strings.Trim(customerHeader, " "))
+				}
 			}
-		}
-		if _, ok := hopToHopHeader[k]; ok {
-			req.Header.Del(k)
+			req.Header.Del(hop)
 		}
 	}
 }
