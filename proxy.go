@@ -1,12 +1,14 @@
-package proxy
+package IyovGo
 
 import (
 	"IyovGo/cert"
 	"IyovGo/conn"
 	"bufio"
+	"bytes"
 	"crypto/tls"
 	"fmt"
 	"github.com/pkg/errors"
+	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
@@ -75,6 +77,11 @@ func (proxy *Proxy)handleHTTPS(clientConn *conn.Connection,req *http.Request)  {
 	}
 	request.URL.Scheme = "https"
 	request.URL.Host = req.URL.Host
+
+	// http.Request.Body can only be read once, a new body needs to be copied
+	reqBody, err := ioutil.ReadAll(request.Body)
+	request.Body = ioutil.NopCloser(bytes.NewReader(reqBody))
+
 	resp, err := proxy.doRequest(request)
 	if err != nil {
 		fmt.Printf("%+v",errors.WithStack(err))
@@ -83,7 +90,14 @@ func (proxy *Proxy)handleHTTPS(clientConn *conn.Connection,req *http.Request)  {
 	}
 
 	defer resp.Body.Close()
+	respBody, err := ioutil.ReadAll(resp.Body)
+	resp.Body = ioutil.NopCloser(bytes.NewReader(respBody))
 	resp.Write(tlsConn)
+	//request.Body = ioutil.NopCloser(bytes.NewReader(reqBody))
+
+	//a, _ := ioutil.ReadAll(resp.Body)
+	//fmt.Println(string(respBody))
+
 }
 
 func (proxy *Proxy)handleHTTP(clientConn *conn.Connection, req *http.Request){
@@ -99,23 +113,28 @@ func (proxy *Proxy)handleHTTP(clientConn *conn.Connection, req *http.Request){
 
 // 请求目标服务器
 func (proxy *Proxy)doRequest(req *http.Request) (*http.Response, error) {
-	removeHopHeader(req)
-	return (&http.Transport{
-		DisableKeepAlives: true,
+	removeHopHeader(req.Header)
+	resp, err :=  (&http.Transport{
+		//DisableKeepAlives: true,
 		ResponseHeaderTimeout: 30 * time.Second,
 	}).RoundTrip(req)
+	if err != nil {
+		return nil, err
+	}
+	removeHopHeader(resp.Header)
+	return resp, err
 }
 
 // remove hop header
-func removeHopHeader(req *http.Request) {
+func removeHopHeader(header http.Header) {
 	for _, hop := range hopToHopHeader {
-		if value := req.Header.Get(hop); len(value) != 0 {
+		if value := header.Get(hop); len(value) != 0 {
 			if strings.EqualFold(hop, "Connection") {
 				for _, customerHeader := range strings.Split(value, ",") {
-					req.Header.Del(strings.Trim(customerHeader, " "))
+					header.Del(strings.Trim(customerHeader, " "))
 				}
 			}
-			req.Header.Del(hop)
+			header.Del(hop)
 		}
 	}
 }
