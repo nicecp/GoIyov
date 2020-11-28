@@ -46,7 +46,7 @@ func (proxy *Proxy)ServerHandler(rw http.ResponseWriter, req *http.Request) {
 		clientConn.Write(tunnelConnectionEstablished)
 		go proxy.handleHTTPS(clientConn, req)
 	default : // todo websocket
-		go proxy.handleHTTP(clientConn, req)
+		proxy.handleHTTP(clientConn, req)
 		//resp.Write(clientConn)
 		//copyHeader(rw.Header(), resp.Header)
 		//rw.WriteHeader(resp.StatusCode)
