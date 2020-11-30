@@ -3,12 +3,13 @@ package IyovGo
 import (
 	"IyovGo/cert"
 	"IyovGo/conn"
-	"bufio"
+	"IyovGo/entity"
 	"bytes"
 	"crypto/tls"
 	"fmt"
 	"github.com/pkg/errors"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -16,8 +17,8 @@ import (
 
 var (
 	tunnelConnectionEstablished = []byte("HTTP/1.1 200 Connection Established\r\n\r\n") // 通道连接建立
-	badGateway = []byte(fmt.Sprintf("HTTP/1.1 %d %s\r\n\rn", http.StatusBadGateway, http.StatusText(http.StatusBadGateway)))
-	hopToHopHeader = []string{ // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers
+	internalServerErr			= "HTTP/1.1 %d %s\r\n\r\n"
+	hopToHopHeader              = []string{ // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers
 		"Keep-Alive",
 		"Transfer-Encoding",
 		"TE",
@@ -30,9 +31,7 @@ var (
 	}
 )
 
-type Proxy struct {
-
-}
+type Proxy struct {}
 
 func (proxy *Proxy)ServerHandler(rw http.ResponseWriter, req *http.Request) {
 	clientConn, err := conn.HijackerConn(rw)
@@ -43,10 +42,11 @@ func (proxy *Proxy)ServerHandler(rw http.ResponseWriter, req *http.Request) {
 
 	switch req.Method {
 	case http.MethodConnect: // https
-		clientConn.Write(tunnelConnectionEstablished)
+		_, _ = clientConn.Write(tunnelConnectionEstablished)
+
 		go proxy.handleHTTPS(clientConn, req)
 	default : // todo websocket
-		go proxy.handleHTTP(clientConn, req)
+		proxy.handleHTTP(clientConn, req)
 		//resp.Write(clientConn)
 		//copyHeader(rw.Header(), resp.Header)
 		//rw.WriteHeader(resp.StatusCode)
@@ -59,33 +59,29 @@ func (proxy *Proxy)handleHTTPS(clientConn *conn.Connection,req *http.Request)  {
 	certificate, err := cert.GetCertificate(req.URL.Host)
 	if err != nil {
 		fmt.Printf("%+v",errors.WithStack(err))
-		clientConn.Write(badGateway)
+		Error(clientConn, http.StatusInternalServerError, err)
 		return
 	}
 
 	tlsConn := tls.Server(clientConn,&tls.Config{Certificates: []tls.Certificate{certificate}})
 	if err := tlsConn.Handshake(); err != nil {
 		fmt.Printf("%+v",errors.WithStack(err))
+		return
 	}
 
 	tlsConn.SetDeadline(time.Now().Add(30 * time.Second))
 	defer tlsConn.Close()
-	request, err := http.ReadRequest(bufio.NewReader(tlsConn))
+
+	proxyEntity, err := entity.NewEntity(tlsConn)
 	if err != nil {
-		fmt.Printf("%+v",errors.WithStack(err))
-		clientConn.Write([]byte("TLS链接请求读取失败"))
+		Error(tlsConn, http.StatusInternalServerError, err)
+		return
 	}
-	request.URL.Scheme = "https"
-	request.URL.Host = req.URL.Host
+	proxyEntity.SetHost(req.URL.Host).SetRemoteAddr(req.RemoteAddr)
 
-	// http.Request.Body can only be read once, a new body needs to be copied
-	reqBody, err := ioutil.ReadAll(request.Body)
-	request.Body = ioutil.NopCloser(bytes.NewReader(reqBody))
-
-	resp, err := proxy.doRequest(request)
+	resp, err := proxy.doRequest(tlsConn, proxyEntity)
 	if err != nil {
-		fmt.Printf("%+v",errors.WithStack(err))
-		clientConn.Write(badGateway)
+		Error(tlsConn, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -93,36 +89,43 @@ func (proxy *Proxy)handleHTTPS(clientConn *conn.Connection,req *http.Request)  {
 	respBody, err := ioutil.ReadAll(resp.Body)
 	resp.Body = ioutil.NopCloser(bytes.NewReader(respBody))
 	resp.Write(tlsConn)
-	//request.Body = ioutil.NopCloser(bytes.NewReader(reqBody))
-
-	//a, _ := ioutil.ReadAll(resp.Body)
-	//fmt.Println(string(respBody))
-
 }
 
 func (proxy *Proxy)handleHTTP(clientConn *conn.Connection, req *http.Request){
 	defer clientConn.Close()
-	resp, err := proxy.doRequest(req)
+
+	proxyEntity, err := entity.NewEntityWithRequest(req)
 	if err != nil {
-		clientConn.Write(badGateway)
+		fmt.Printf("%+v", errors.WithStack(err))
+		Error(clientConn, http.StatusInternalServerError, err)
+		return
+	}
+	resp, err := proxy.doRequest(clientConn, proxyEntity)
+	if err != nil {
+		fmt.Printf("%+v", errors.WithStack(err))
+		Error(clientConn, http.StatusInternalServerError, err)
 		return
 	}
 	defer resp.Body.Close()
+
 	resp.Write(clientConn)
+
+	a, _ := ioutil.ReadAll(resp.Body)
+	fmt.Println(string(a))
 }
 
 // 请求目标服务器
-func (proxy *Proxy)doRequest(req *http.Request) (*http.Response, error) {
-	removeHopHeader(req.Header)
+func (proxy *Proxy)doRequest(clientConn net.Conn, entity *entity.Entity) (*http.Response, error) {
+	removeHopHeader(entity.Request.Header)
 	resp, err :=  (&http.Transport{
-		//DisableKeepAlives: true,
+		DisableKeepAlives: true,
 		ResponseHeaderTimeout: 30 * time.Second,
-	}).RoundTrip(req)
+	}).RoundTrip(entity.Request)
 	if err != nil {
 		return nil, err
 	}
 	removeHopHeader(resp.Header)
-	return resp, err
+	return resp, nil
 }
 
 // remove hop header
@@ -136,5 +139,12 @@ func removeHopHeader(header http.Header) {
 			}
 			header.Del(hop)
 		}
+	}
+}
+
+func Error(net net.Conn, code int, error error) {
+	_, _ = net.Write([]byte(fmt.Sprintf(internalServerErr, code, http.StatusText(code))))
+	if error != nil {
+		_, _ = net.Write([]byte(error.Error()))
 	}
 }
