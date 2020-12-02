@@ -15,6 +15,7 @@ type Entity struct {
 	startTime,endTime time.Time
 	Request *http.Request
 	Response *http.Response
+	// http.Body can only be read once, a new body needs to be copied
 	reqBody,  respBody   io.ReadCloser
 }
 
@@ -24,61 +25,60 @@ func NewEntity(conn net.Conn) (*Entity, error) {
 		return nil, errors.Wrap(err, "请求对象生成失败")
 	}
 
-	// http.Request.Body can only be read once, a new body needs to be copied
-	body, err := getBody(request)
+	bodyBytes, err := ioutil.ReadAll(request.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	request.URL.Scheme = "https"
-	request.Body = body
+	request.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 	return &Entity{
 		startTime: time.Now(),
 		Request: request,
-		reqBody: body,
+		reqBody: ioutil.NopCloser(bytes.NewBuffer(bodyBytes)),
 	}, nil
 }
 
 
 func NewEntityWithRequest(request *http.Request) (*Entity, error) {
-	body, err := getBody(request)
+	bodyBytes, err := ioutil.ReadAll(request.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	request.Body = body
+	request.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 	return &Entity{
 		startTime: time.Now(),
-
 		Request: request,
-		reqBody: body,
+		reqBody: ioutil.NopCloser(bytes.NewBuffer(bodyBytes)),
 	}, nil
 }
 
-func (entity *Entity) setResponse(response *http.Response) {
+func (entity *Entity) SetResponse(response *http.Response) error {
 	entity.endTime = time.Now()
-}
-
-func (entity *Entity) SetScheme(scheme string) *Entity {
-	entity.Request.URL.Scheme = scheme
-	return entity
-}
-
-func (entity *Entity) SetHost(host string) *Entity {
-	entity.Request.URL.Host = host
-	return entity
-}
-
-func (entity *Entity) SetRemoteAddr(remoteAddr string) *Entity {
-	entity.Request.RemoteAddr = remoteAddr
-	return entity
-}
-
-func getBody(request *http.Request) (io.ReadCloser, error) {
-	reqBody, err := ioutil.ReadAll(request.Body)
+	bodyBytes, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return nil, errors.Wrap(err, "获取请求Body失败")
+		return err
 	}
-	return ioutil.NopCloser(bytes.NewReader(reqBody)), nil
+	response.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+	entity.Response = response
+	entity.respBody = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+	return nil
 }
+
+func (entity *Entity) SetScheme(scheme string) {
+	entity.Request.URL.Scheme = scheme
+}
+
+func (entity *Entity) SetHost(host string) {
+	entity.Request.URL.Host = host
+}
+
+func (entity *Entity) SetRemoteAddr(remoteAddr string) {
+	entity.Request.RemoteAddr = remoteAddr
+}
+
+func (entity *Entity) GetResponseBody() io.ReadCloser {
+	return entity.respBody
+}
+
 
