@@ -1,4 +1,4 @@
-package dns
+package IyovGo
 
 import (
 	"net"

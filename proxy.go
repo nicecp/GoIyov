@@ -3,7 +3,6 @@ package IyovGo
 import (
 	"IyovGo/cert"
 	"IyovGo/conn"
-	"IyovGo/dns"
 	"IyovGo/entity"
 	"context"
 	"crypto/tls"
@@ -47,16 +46,11 @@ func (proxy *Proxy)ServerHandler(rw http.ResponseWriter, req *http.Request) {
 		go proxy.handleHTTPS(clientConn, req)
 	default : // todo websocket
 		proxy.handleHTTP(clientConn, req)
-		//resp.Write(clientConn)
-		//copyHeader(rw.Header(), resp.Header)
-		//rw.WriteHeader(resp.StatusCode)
-		//io.Copy(rw, resp.Body) // Header也要发给rw
 	}
 }
 
 func (proxy *Proxy)handleHTTPS(clientConn *conn.Connection,req *http.Request)  {
 	defer clientConn.Close()
-	//fmt.Printf("%+v\r\n\r\n", req)
 	certificate, err := cert.GetCertificate(req.URL.Host)
 	if err != nil {
 		fmt.Printf("%+v",errors.WithStack(err))
@@ -73,7 +67,6 @@ func (proxy *Proxy)handleHTTPS(clientConn *conn.Connection,req *http.Request)  {
 	_ = tlsConn.SetDeadline(time.Now().Add(30 * time.Second))
 	defer tlsConn.Close()
 
-	//proxyEntity, err := entity.NewEntityWithRequest(req)
 	proxyEntity,err := entity.NewEntity(tlsConn)
 	if err != nil {
 		Error(tlsConn, err)
@@ -132,7 +125,7 @@ func (proxy *Proxy)doRequest(clientConn net.Conn, entity *entity.Entity) (*http.
 		DisableKeepAlives: true,
 		ResponseHeaderTimeout: 30 * time.Second,
 		DialContext: func(ctx context.Context, network, addr string) (i net.Conn, e error) {
-			addr, _ = dns.CustomDialer(addr)
+			addr, _ = CustomDialer(addr)
 			return dialer.DialContext(ctx, network, addr)
 		},
 	}).RoundTrip(entity.Request)
