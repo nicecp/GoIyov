@@ -3,21 +3,47 @@
 #### 介绍
 golang 代理
 
-#### 软件架构
-软件架构说明
-
 
 #### 安装教程
+```bash
+ go get github/nicecp/IyovGo
+```
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+#### 支持特性
+* HTTP/HTTPS代理
+* TLS/SSL解密
+* MITM(中间人攻击)
+* 自定义DNS
+* Certiface缓存
+* Statistic统计(开发中)
 
 #### 使用说明
+![软件结构图](docs/IyovGo.jpg)
+> ***双击 `cert/caRoot.crt`根证书文件，并信任该证书***
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+```go
+import (
+	"IyovGo"
+	"net/http"
+	"time"
+)
+
+func main() {
+	proxy := new(IyovGo.Proxy)
+	server := &http.Server{
+		Addr:         ":8888",
+		Handler:	  http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+			proxy.ServerHandler(rw, req)
+		}),
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 30 * time.Second,
+	}
+	err := server.ListenAndServe()
+	if err != nil {
+		panic(err)
+	}
+}
+```
 
 #### 参与贡献
 
