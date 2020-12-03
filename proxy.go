@@ -3,7 +3,9 @@ package IyovGo
 import (
 	"IyovGo/cert"
 	"IyovGo/conn"
+	"IyovGo/dns"
 	"IyovGo/entity"
+	"context"
 	"crypto/tls"
 	"fmt"
 	"github.com/pkg/errors"
@@ -121,9 +123,18 @@ func (proxy *Proxy)handleHTTP(clientConn *conn.Connection, req *http.Request){
 // 请求目标服务器
 func (proxy *Proxy)doRequest(clientConn net.Conn, entity *entity.Entity) (*http.Response, error) {
 	removeHopHeader(entity.Request.Header)
+
+	dialer := &net.Dialer{
+		Timeout: 5 * time.Second,
+		Deadline: time.Now().Add(30 * time.Second),
+	}
 	resp, err :=  (&http.Transport{
 		DisableKeepAlives: true,
 		ResponseHeaderTimeout: 30 * time.Second,
+		DialContext: func(ctx context.Context, network, addr string) (i net.Conn, e error) {
+			addr, _ = dns.CustomDialer(addr)
+			return dialer.DialContext(ctx, network, addr)
+		},
 	}).RoundTrip(entity.Request)
 	if err != nil {
 		return nil, err
