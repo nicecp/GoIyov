@@ -77,7 +77,7 @@ func (proxy *Proxy)handleHTTPS(clientConn *conn.Connection,req *http.Request)  {
 	proxyEntity.SetHost(req.URL.Host)
 	proxyEntity.SetRemoteAddr(req.RemoteAddr)
 
-	resp, err := proxy.doRequest(tlsConn, proxyEntity)
+	resp, err := proxy.doRequest(proxyEntity)
 	if err != nil {
 		Error(tlsConn, err)
 		return
@@ -101,7 +101,7 @@ func (proxy *Proxy)handleHTTP(clientConn *conn.Connection, req *http.Request){
 		Error(clientConn, err)
 		return
 	}
-	resp, err := proxy.doRequest(clientConn, proxyEntity)
+	resp, err := proxy.doRequest(proxyEntity)
 	if err != nil {
 		fmt.Printf("%+v", errors.WithStack(err))
 		Error(clientConn, err)
@@ -114,7 +114,7 @@ func (proxy *Proxy)handleHTTP(clientConn *conn.Connection, req *http.Request){
 }
 
 // 请求目标服务器
-func (proxy *Proxy)doRequest(clientConn net.Conn, entity *entity.Entity) (*http.Response, error) {
+func (proxy *Proxy)doRequest(entity *entity.Entity) (*http.Response, error) {
 	removeHopHeader(entity.Request.Header)
 
 	dialer := &net.Dialer{
