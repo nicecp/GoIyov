@@ -12,11 +12,11 @@ import (
 )
 
 type Entity struct {
-	startTime,endTime time.Time
-	Request *http.Request
-	Response *http.Response
+	startTime, endTime time.Time
+	Request            *http.Request
+	Response           *http.Response
 	// http.Body can only be read once, a new body needs to be copied
-	reqBody,  respBody   io.ReadCloser
+	reqBody, respBody io.ReadCloser
 }
 
 func NewEntity(conn net.Conn) (*Entity, error) {
@@ -33,11 +33,10 @@ func NewEntity(conn net.Conn) (*Entity, error) {
 	request.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 	return &Entity{
 		startTime: time.Now(),
-		Request: request,
-		reqBody: ioutil.NopCloser(bytes.NewBuffer(bodyBytes)),
+		Request:   request,
+		reqBody:   ioutil.NopCloser(bytes.NewBuffer(bodyBytes)),
 	}, nil
 }
-
 
 func NewEntityWithRequest(request *http.Request) (*Entity, error) {
 	bodyBytes, err := ioutil.ReadAll(request.Body)
@@ -48,8 +47,8 @@ func NewEntityWithRequest(request *http.Request) (*Entity, error) {
 	request.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 	return &Entity{
 		startTime: time.Now(),
-		Request: request,
-		reqBody: ioutil.NopCloser(bytes.NewBuffer(bodyBytes)),
+		Request:   request,
+		reqBody:   ioutil.NopCloser(bytes.NewBuffer(bodyBytes)),
 	}, nil
 }
 
@@ -77,8 +76,10 @@ func (entity *Entity) SetRemoteAddr(remoteAddr string) {
 	entity.Request.RemoteAddr = remoteAddr
 }
 
+func (entity *Entity) GetRequestBody() io.ReadCloser {
+	return entity.reqBody
+}
+
 func (entity *Entity) GetResponseBody() io.ReadCloser {
 	return entity.respBody
 }
-
-

@@ -16,7 +16,7 @@ import (
 
 var (
 	tunnelConnectionEstablished = []byte("HTTP/1.1 200 Connection Established\r\n\r\n") // 通道连接建立
-	internalServerErr			= []byte(fmt.Sprintf("HTTP/1.1 %d %s\r\n\r\n", http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError)))
+	internalServerErr           = []byte(fmt.Sprintf("HTTP/1.1 %d %s\r\n\r\n", http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError)))
 	hopToHopHeader              = []string{ // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers
 		"Keep-Alive",
 		"Transfer-Encoding",
@@ -30,9 +30,19 @@ var (
 	}
 )
 
-type Proxy struct {}
+type Proxy struct {
+	delegate Delegate
+}
 
-func (proxy *Proxy)ServerHandler(rw http.ResponseWriter, req *http.Request) {
+func New() *Proxy {
+	return &Proxy{delegate: &DefaultDelegate{}}
+}
+
+func NewWithDelegate(delegate Delegate) *Proxy {
+	return &Proxy{delegate: delegate}
+}
+
+func (proxy *Proxy) ServerHandler(rw http.ResponseWriter, req *http.Request) {
 	clientConn, err := conn.HijackerConn(rw)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
@@ -44,32 +54,32 @@ func (proxy *Proxy)ServerHandler(rw http.ResponseWriter, req *http.Request) {
 		_, _ = clientConn.Write(tunnelConnectionEstablished)
 
 		go proxy.handleHTTPS(clientConn, req)
-	default : // todo websocket
+	default: // todo websocket
 		proxy.handleHTTP(clientConn, req)
 	}
 }
 
-func (proxy *Proxy)handleHTTPS(clientConn *conn.Connection,req *http.Request)  {
+func (proxy *Proxy) handleHTTPS(clientConn *conn.Connection, req *http.Request) {
 	defer clientConn.Close()
 	certificate, err := cert.GetCertificate(req.URL.Host)
 	if err != nil {
-		fmt.Printf("%+v",errors.WithStack(err))
-		Error(clientConn, err)
+		fmt.Printf("%+v", errors.WithStack(err))
+		proxy.Error(clientConn, err)
 		return
 	}
 
-	tlsConn := tls.Server(clientConn,&tls.Config{Certificates: []tls.Certificate{certificate}})
+	tlsConn := tls.Server(clientConn, &tls.Config{Certificates: []tls.Certificate{certificate}})
 	if err := tlsConn.Handshake(); err != nil {
-		fmt.Printf("%+v",errors.WithStack(err))
+		fmt.Printf("%+v", errors.WithStack(err))
 		return
 	}
 
 	_ = tlsConn.SetDeadline(time.Now().Add(30 * time.Second))
 	defer tlsConn.Close()
 
-	proxyEntity,err := entity.NewEntity(tlsConn)
+	proxyEntity, err := entity.NewEntity(tlsConn)
 	if err != nil {
-		Error(tlsConn, err)
+		proxy.Error(tlsConn, err)
 		return
 	}
 
@@ -77,52 +87,63 @@ func (proxy *Proxy)handleHTTPS(clientConn *conn.Connection,req *http.Request)  {
 	proxyEntity.SetHost(req.URL.Host)
 	proxyEntity.SetRemoteAddr(req.RemoteAddr)
 
+	proxy.delegate.BeforeRequest(proxyEntity)
+
 	resp, err := proxy.doRequest(proxyEntity)
 	if err != nil {
-		Error(tlsConn, err)
+		proxy.Error(tlsConn, err)
 		return
 	}
 
 	defer resp.Body.Close()
 
 	if err = proxyEntity.SetResponse(resp); err != nil {
-		Error(tlsConn, err)
+		proxy.Error(tlsConn, err)
 	}
 
+	proxy.delegate.BeforeResponse(proxyEntity, err)
 	_ = resp.Write(tlsConn)
 }
 
-func (proxy *Proxy)handleHTTP(clientConn *conn.Connection, req *http.Request){
+func (proxy *Proxy) handleHTTP(clientConn *conn.Connection, req *http.Request) {
 	defer clientConn.Close()
 
 	proxyEntity, err := entity.NewEntityWithRequest(req)
 	if err != nil {
 		fmt.Printf("%+v", errors.WithStack(err))
-		Error(clientConn, err)
+		proxy.Error(clientConn, err)
 		return
 	}
+
+	proxy.delegate.BeforeRequest(proxyEntity)
+
 	resp, err := proxy.doRequest(proxyEntity)
 	if err != nil {
 		fmt.Printf("%+v", errors.WithStack(err))
-		Error(clientConn, err)
+		proxy.Error(clientConn, err)
 		return
 	}
 	defer resp.Body.Close()
 
+	if err = proxyEntity.SetResponse(resp); err != nil {
+		proxy.Error(clientConn, err)
+	}
+
+	proxy.delegate.BeforeResponse(proxyEntity, err)
 	_ = resp.Write(clientConn)
 
 }
 
 // 请求目标服务器
-func (proxy *Proxy)doRequest(entity *entity.Entity) (*http.Response, error) {
+func (proxy *Proxy) doRequest(entity *entity.Entity) (*http.Response, error) {
 	removeHopHeader(entity.Request.Header)
 
 	dialer := &net.Dialer{
-		Timeout: 5 * time.Second,
+		Timeout:  5 * time.Second,
 		Deadline: time.Now().Add(30 * time.Second),
 	}
-	resp, err :=  (&http.Transport{
-		DisableKeepAlives: true,
+	resp, err := (&http.Transport{
+		DisableKeepAlives:     true,
 		ResponseHeaderTimeout: 30 * time.Second,
 		DialContext: func(ctx context.Context, network, addr string) (i net.Conn, e error) {
 			addr, _ = CustomDialer(addr)
@@ -150,7 +171,8 @@ func removeHopHeader(header http.Header) {
 	}
 }
 
-func Error(net net.Conn, error error) {
+func (proxy *Proxy) Error(net net.Conn, error error) {
+	proxy.delegate.ErrorLog(error)
 	_, _ = net.Write(internalServerErr)
 	if error != nil {
 		_, _ = net.Write([]byte(error.Error()))

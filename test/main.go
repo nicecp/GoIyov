@@ -7,10 +7,10 @@ import (
 )
 
 func main() {
-	proxy := new(IyovGo.Proxy)
+	proxy := IyovGo.New()
 	server := &http.Server{
-		Addr:         ":8888",
-		Handler:	  http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		Addr: ":8888",
+		Handler: http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			proxy.ServerHandler(rw, req)
 		}),
 		ReadTimeout:  30 * time.Second,
