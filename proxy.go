@@ -109,6 +109,10 @@ func (proxy *Proxy)handleHTTP(clientConn *conn.Connection, req *http.Request){
 	}
 	defer resp.Body.Close()
 
+	if err = proxyEntity.SetResponse(resp); err != nil {
+		proxy.Error(clientConn, err)
+	}
+
 	_ = resp.Write(clientConn)
 
 }
