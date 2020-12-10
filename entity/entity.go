@@ -77,6 +77,10 @@ func (entity *Entity) SetRemoteAddr(remoteAddr string) {
 	entity.Request.RemoteAddr = remoteAddr
 }
 
+func (entity *Entity) GetRequestBody() io.ReadCloser {
+	return entity.reqBody
+}
+
 func (entity *Entity) GetResponseBody() io.ReadCloser {
 	return entity.respBody
 }
