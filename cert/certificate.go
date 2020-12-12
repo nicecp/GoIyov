@@ -27,18 +27,19 @@ var currentPath string
 
 func init() {
 	certCache = cache.NewCache()
-	if err := loadRootCa(); err != nil {
-		panic(err)
-	}
-	if err := loadRootKey(); err != nil {
-		panic(err)
-	}
 
 	_, filename, _, ok := runtime.Caller(0)
 	if !ok {
 		panic("No caller information")
 	}
 	currentPath = path.Dir(filename)
+
+	if err := loadRootCa(); err != nil {
+		panic(err)
+	}
+	if err := loadRootKey(); err != nil {
+		panic(err)
+	}
 }
 
 func GetCertificate(host string) (tls.Certificate, error) {
