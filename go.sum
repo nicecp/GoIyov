@@ -1,2 +1,4 @@
+github.com/nicecp/GoIyov v0.0.0 h1:eIXxTGCGy+7P1tJOMGP8F1PfyKzANvoweKWF1pL5GfQ=
+github.com/nicecp/GoIyov v0.0.0/go.mod h1:JxUbxikunMIX3pI0qkZSngBWvcMlZp5o3TruompPies=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
