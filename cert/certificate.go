@@ -12,6 +12,8 @@ import (
 	"io/ioutil"
 	"math/big"
 	"net"
+	"path"
+	"runtime"
 	"time"
 )
 
@@ -21,6 +23,7 @@ var (
 )
 
 var certCache *cache.Cache
+var currentPath string
 
 func init() {
 	certCache = cache.NewCache()
@@ -30,6 +33,12 @@ func init() {
 	if err := loadRootKey(); err != nil {
 		panic(err)
 	}
+
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		panic("No caller information")
+	}
+	currentPath = path.Dir(filename)
 }
 
 func GetCertificate(host string) (tls.Certificate, error) {
@@ -102,7 +111,7 @@ func generateKeyPair() (*rsa.PrivateKey, error) {
 
 // 加载根证书
 func loadRootCa() error {
-	file, err := ioutil.ReadFile("cert/caRoot.crt")
+	file, err := ioutil.ReadFile(currentPath + "cert/caRoot.crt")
 	if err != nil {
 		return errors.Wrap(err, "CA证书不存在")
 	}
@@ -122,7 +131,7 @@ func loadRootCa() error {
 
 // 加载根Private Key
 func loadRootKey() error {
-	file, err := ioutil.ReadFile("cert/caPri.key")
+	file, err := ioutil.ReadFile(currentPath + "cert/caPri.key")
 	if err != nil {
 		return errors.Wrap(err, "CA Key证书不存在")
 	}
