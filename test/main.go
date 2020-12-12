@@ -1,7 +1,7 @@
 package main
 
 import (
-	"GoIyov"
+	"github.com/nicecp/GoIyov"
 	"net/http"
 	"time"
 )
