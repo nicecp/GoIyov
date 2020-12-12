@@ -23,14 +23,15 @@ golang 代理
 
 ##### 代理使用
 ```go
+package main
 import (
-	"GoIyov"
+	"github.com/nicecp/GoIyov"
 	"net/http"
 	"time"
 )
 
 func main() {
-	proxy := new(GoIyov.Proxy)
+	proxy := GoIyov.New()
 	server := &http.Server{
 		Addr:         ":8888",
 		Handler:	  http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
@@ -50,9 +51,9 @@ func main() {
 package main
 
 import (
-	"GoIyov"
-	"GoIyov/entity"
 	"fmt"
+	"github.com/nicecp/GoIyov"
+	"github.com/nicecp/GoIyov/entity"
 	"net/http"
 	"time"
 )
