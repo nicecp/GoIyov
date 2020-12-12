@@ -1,8 +1,8 @@
 package cache
 
 import (
-	"GoIyov/singleflight"
 	"crypto/tls"
+	"github.com/nicecp/GoIyov/singleflight"
 	"sync"
 )
 

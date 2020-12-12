@@ -1,12 +1,12 @@
 package GoIyov
 
 import (
-	"GoIyov/cert"
-	"GoIyov/conn"
-	"GoIyov/entity"
 	"context"
 	"crypto/tls"
 	"fmt"
+	"github.com/nicecp/GoIyov/cert"
+	"github.com/nicecp/GoIyov/conn"
+	"github.com/nicecp/GoIyov/entity"
 	"github.com/pkg/errors"
 	"net"
 	"net/http"
