@@ -1,13 +1,13 @@
 package cache
 
 import (
-	"IyovGo/singleflight"
+	"GoIyov/singleflight"
 	"crypto/tls"
 	"sync"
 )
 
 type Cache struct {
-	m sync.Map
+	m           sync.Map
 	singleGroup *singleflight.Group
 }
 
@@ -30,6 +30,6 @@ func (cache *Cache) GetOrStore(key string, fn func() (interface{}, error)) (inte
 	return cert.(tls.Certificate), nil
 }
 
-func (cache *Cache)GetCache() sync.Map {
+func (cache *Cache) GetCache() sync.Map {
 	return cache.m
 }

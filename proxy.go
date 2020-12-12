@@ -1,9 +1,9 @@
-package IyovGo
+package GoIyov
 
 import (
-	"IyovGo/cert"
-	"IyovGo/conn"
-	"IyovGo/entity"
+	"GoIyov/cert"
+	"GoIyov/conn"
+	"GoIyov/entity"
 	"context"
 	"crypto/tls"
 	"fmt"

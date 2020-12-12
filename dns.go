@@ -1,10 +1,10 @@
-package IyovGo
+package GoIyov
 
 import (
 	"net"
 )
 
-var dnsMapping  = map[string]string{
+var dnsMapping = map[string]string{
 	"localhost-x": "127.0.0.1",
 }
 

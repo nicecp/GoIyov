@@ -1,7 +1,7 @@
-package IyovGo
+package GoIyov
 
 import (
-	"IyovGo/entity"
+	"GoIyov/entity"
 )
 
 type Delegate interface {
@@ -17,6 +17,6 @@ type DefaultDelegate struct {
 	Delegate
 }
 
-func (delegate *DefaultDelegate) BeforeRequest(entity *entity.Entity) {}
+func (delegate *DefaultDelegate) BeforeRequest(entity *entity.Entity)             {}
 func (delegate *DefaultDelegate) BeforeResponse(entity *entity.Entity, err error) {}
-func (delegate *DefaultDelegate) ErrorLog(err error) {}
+func (delegate *DefaultDelegate) ErrorLog(err error)                              {}

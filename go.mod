@@ -1,4 +1,4 @@
-module IyovGo
+module GoIyov
 
 go 1.12
 

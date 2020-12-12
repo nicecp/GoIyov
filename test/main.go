@@ -1,13 +1,13 @@
 package main
 
 import (
-	"IyovGo"
+	"GoIyov"
 	"net/http"
 	"time"
 )
 
 func main() {
-	proxy := IyovGo.New()
+	proxy := GoIyov.New()
 	server := &http.Server{
 		Addr: ":8888",
 		Handler: http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
