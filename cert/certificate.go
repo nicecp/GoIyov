@@ -112,7 +112,7 @@ func generateKeyPair() (*rsa.PrivateKey, error) {
 
 // 加载根证书
 func loadRootCa() error {
-	file, err := ioutil.ReadFile(currentPath + "cert/caRoot.crt")
+	file, err := ioutil.ReadFile(currentPath + "/caRoot.crt")
 	if err != nil {
 		return errors.Wrap(err, "CA证书不存在")
 	}
@@ -132,7 +132,7 @@ func loadRootCa() error {
 
 // 加载根Private Key
 func loadRootKey() error {
-	file, err := ioutil.ReadFile(currentPath + "cert/caPri.key")
+	file, err := ioutil.ReadFile(currentPath + "/caPri.key")
 	if err != nil {
 		return errors.Wrap(err, "CA Key证书不存在")
 	}
