@@ -6,7 +6,7 @@ golang 代理
 
 #### 安装教程
 ```bash
- go get github/nicecp/GoIyov
+ go get -u github/nicecp/GoIyov
 ```
 
 #### 支持特性
@@ -21,7 +21,7 @@ golang 代理
 ![软件结构图](docs/GoIyov.jpg)
 > ***双击 `cert/caRoot.crt`根证书文件，并信任该证书***
 
-##### 代理使用
+##### 代理
 ```go
 package main
 import (
@@ -45,6 +45,11 @@ func main() {
 		panic(err)
 	}
 }
+```
+
+##### 自定义DNS
+```go
+proxy.AddDnsRecords(map[string]string{"localhost-x":"127.0.0.1"})
 ```
 ##### MITM(中间人攻击)
 ```go
