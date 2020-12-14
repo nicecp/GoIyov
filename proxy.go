@@ -32,14 +32,19 @@ var (
 
 type Proxy struct {
 	delegate Delegate
+	dns *Dns
 }
 
 func New() *Proxy {
-	return &Proxy{delegate: &DefaultDelegate{}}
+	return &Proxy{delegate: &DefaultDelegate{},dns: &DefaultDns}
 }
 
 func NewWithDelegate(delegate Delegate) *Proxy {
-	return &Proxy{delegate: delegate}
+	return &Proxy{delegate: delegate, dns: &DefaultDns}
+}
+
+func (proxy *Proxy) AddDnsRecords(records map[string]string) {
+	proxy.dns.Add(records)
 }
 
 func (proxy *Proxy) ServerHandler(rw http.ResponseWriter, req *http.Request) {
@@ -146,7 +151,7 @@ func (proxy *Proxy) doRequest(entity *entity.Entity) (*http.Response, error) {
 		DisableKeepAlives:     true,
 		ResponseHeaderTimeout: 30 * time.Second,
 		DialContext: func(ctx context.Context, network, addr string) (i net.Conn, e error) {
-			addr, _ = CustomDialer(addr)
+			addr, _ = proxy.dns.CustomDialer(addr)
 			return dialer.DialContext(ctx, network, addr)
 		},
 	}).RoundTrip(entity.Request)
