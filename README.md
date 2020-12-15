@@ -14,7 +14,7 @@ golang 代理
 * TLS/SSL解密
 * MITM(中间人攻击)
 * 自定义DNS
-* Certiface缓存
+* Certificate缓存
 * Statistic统计(开发中)
 
 #### 使用说明
