@@ -1,6 +1,7 @@
 package cert
 
 import (
+	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
@@ -8,9 +9,12 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"github.com/nicecp/GoIyov/cache"
+	"fmt"
 	"github.com/pkg/errors"
 	"math/big"
 	"net"
+	"os"
+	"os/exec"
 	"time"
 )
 
@@ -82,6 +86,10 @@ func init() {
 		panic(err)
 	}
 	if err := loadRootKey(); err != nil {
+		panic(err)
+	}
+
+	if err := addTrustedCert(); err != nil {
 		panic(err)
 	}
 }
@@ -176,4 +184,38 @@ func loadRootKey() error {
 	}
 
 	return err
+}
+
+// 添加信任跟证书至钥匙串
+func addTrustedCert() error {
+	dir, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	fileName := dir + "/caRootCert.crt"
+	file, err := os.OpenFile(fileName, os.O_RDWR|os.O_CREATE, 0755)
+	if err != nil {
+		return err
+	}
+	defer os.Remove(fileName)
+	defer file.Close()
+
+	file.Write(_rootCa)
+
+	command := fmt.Sprintf("sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain %s", fileName)
+	return shell(command)
+}
+
+// 执行shell命令
+func shell(command string) error {
+	cmd := exec.Command("sh", "-c", command)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = os.Stderr
+	err := cmd.Start()
+	if err != nil {
+		return errors.Wrap(err, "")
+	}
+	return errors.Wrap(cmd.Wait(), out.String())
 }
