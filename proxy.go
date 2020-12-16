@@ -53,8 +53,8 @@ func NewWithDelegate(delegate Delegate) *Proxy {
 	return &Proxy{delegate: delegate, dns: &DefaultDns}
 }
 
-func (proxy *Proxy) AddDnsRecords(records map[string]string) {
-	proxy.dns.Add(records)
+func (proxy *Proxy) AddDnsRecord(host, record string) {
+	proxy.dns.Add(map[string]string{host: record})
 }
 
 func (proxy *Proxy) ServerHandler(rw http.ResponseWriter, req *http.Request) {
