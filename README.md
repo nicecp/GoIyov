@@ -27,23 +27,23 @@ $ go run main.go [-cert]
 
 #### 使用说明
 ```go
+// 生成代理类
 func (proxy *Proxy) New() *Proxy
 ```
-New 生成代理类
-
 ```go
 type Delegate interface {
 	BeforeRequest(entity *entity.Entity)
 	BeforeResponse(entity *entity.Entity, err error)
 	ErrorLog(err error)
 }
+// 生成代理类, MITM事件处理
 func (proxy *Proxy) NewWithDelegate(delegate Delegate) *Proxy
 ```
-NewWithDelegate 生成代理类，支持MITM事件处理
 ```go
+// 将host解析至remote地址
 func (proxy *Proxy) AddDnsRecord(host,remote string)
 ```
-AddDnsRecord 将host解析至remote地址
+
 ##### 代理
 ```go
 package main
