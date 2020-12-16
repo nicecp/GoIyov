@@ -15,6 +15,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"runtime"
 	"time"
 )
 
@@ -86,10 +87,6 @@ func init() {
 		panic(err)
 	}
 	if err := loadRootKey(); err != nil {
-		panic(err)
-	}
-
-	if err := addTrustedCert(); err != nil {
 		panic(err)
 	}
 }
@@ -186,8 +183,13 @@ func loadRootKey() error {
 	return err
 }
 
+// 获取证书原内容
+func GetCaCert() []byte {
+	return _rootCa
+}
+
 // 添加信任跟证书至钥匙串
-func addTrustedCert() error {
+func AddTrustedCert() error {
 	dir, err := os.Getwd()
 	if err != nil {
 		return err
@@ -203,7 +205,16 @@ func addTrustedCert() error {
 
 	file.Write(_rootCa)
 
-	command := fmt.Sprintf("sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain %s", fileName)
+	var command string
+	switch runtime.GOOS {
+	case "darwin":
+		command = fmt.Sprintf("sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain %s", fileName)
+	case "windows":
+		command = fmt.Sprintf("certutil -addstore -f \"ROOT\" %s", fileName)
+	default:
+		return errors.New("仅支持MaxOS/Windows系统")
+	}
+
 	return shell(command)
 }
 
@@ -218,9 +229,4 @@ func shell(command string) error {
 		return errors.Wrap(err, "")
 	}
 	return errors.Wrap(cmd.Wait(), out.String())
-}
-
-// 获取证书原内容
-func GetCaCert() []byte {
-	return _rootCa
 }

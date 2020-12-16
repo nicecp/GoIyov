@@ -3,6 +3,7 @@ package GoIyov
 import (
 	"context"
 	"crypto/tls"
+	"flag"
 	"fmt"
 	"github.com/nicecp/GoIyov/cert"
 	"github.com/nicecp/GoIyov/conn"
@@ -30,11 +31,20 @@ var (
 	}
 )
 
+var serverCertFlag = flag.Bool("cert", false, "安装server证书,默认不安装")
 type Proxy struct {
 	delegate Delegate
 	dns *Dns
 }
 
+func init() {
+	flag.Parse()
+	if *serverCertFlag { // 安装服务端证书
+		if err := cert.AddTrustedCert(); err != nil {
+			panic(err)
+		}
+	}
+}
 func New() *Proxy {
 	return &Proxy{delegate: &DefaultDelegate{},dns: &DefaultDns}
 }
@@ -48,8 +58,10 @@ func (proxy *Proxy) AddDnsRecords(records map[string]string) {
 }
 
 func (proxy *Proxy) ServerHandler(rw http.ResponseWriter, req *http.Request) {
-	if req.URL.Hostname() == proxy.dns.SslCertHost && req.URL.Path == "/ssl" {
-		installDeviceCert(rw, req) // 安装移动端证书
+	if req.URL.Hostname() == proxy.dns.SslCertHost && req.URL.Path == "/ssl" { // 安装移动端证书
+		rw.Header().Add("Connection", "close")
+		rw.Header().Add("Content-Type", "application/x-x509-ca-cert")
+		rw.Write(cert.GetCaCert())
 		return
 	}
 
@@ -185,10 +197,4 @@ func (proxy *Proxy) Error(net net.Conn, error error) {
 		fmt.Printf("%+v", errors.WithStack(error))
 		_, _ = net.Write([]byte(error.Error()))
 	}
-}
-
-func installDeviceCert(rw http.ResponseWriter, req *http.Request) {
-	rw.Header().Add("Connection", "close")
-	rw.Header().Add("Content-Type", "application/x-x509-ca-cert")
-	rw.Write(cert.GetCaCert())
 }
