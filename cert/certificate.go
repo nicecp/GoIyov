@@ -8,8 +8,8 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
-	"github.com/nicecp/GoIyov/cache"
 	"fmt"
+	"github.com/nicecp/GoIyov/cache"
 	"github.com/pkg/errors"
 	"math/big"
 	"net"
@@ -218,4 +218,9 @@ func shell(command string) error {
 		return errors.Wrap(err, "")
 	}
 	return errors.Wrap(cmd.Wait(), out.String())
+}
+
+// 获取证书原内容
+func GetCaCert() []byte {
+	return _rootCa
 }

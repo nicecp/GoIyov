@@ -48,6 +48,11 @@ func (proxy *Proxy) AddDnsRecords(records map[string]string) {
 }
 
 func (proxy *Proxy) ServerHandler(rw http.ResponseWriter, req *http.Request) {
+	if req.URL.Hostname() == proxy.dns.SslCertHost && req.URL.Path == "/ssl" {
+		installDeviceCert(rw, req) // 安装移动端证书
+		return
+	}
+
 	clientConn, err := conn.HijackerConn(rw)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
@@ -68,14 +73,13 @@ func (proxy *Proxy) handleHTTPS(clientConn *conn.Connection, req *http.Request) 
 	defer clientConn.Close()
 	certificate, err := cert.GetCertificate(req.URL.Host)
 	if err != nil {
-		fmt.Printf("%+v", errors.WithStack(err))
 		proxy.Error(clientConn, err)
 		return
 	}
 
 	tlsConn := tls.Server(clientConn, &tls.Config{Certificates: []tls.Certificate{certificate}})
 	if err := tlsConn.Handshake(); err != nil {
-		fmt.Printf("%+v", errors.WithStack(err))
+		proxy.Error(tlsConn, err)
 		return
 	}
 
@@ -115,7 +119,6 @@ func (proxy *Proxy) handleHTTP(clientConn *conn.Connection, req *http.Request) {
 
 	proxyEntity, err := entity.NewEntityWithRequest(req)
 	if err != nil {
-		fmt.Printf("%+v", errors.WithStack(err))
 		proxy.Error(clientConn, err)
 		return
 	}
@@ -124,7 +127,6 @@ func (proxy *Proxy) handleHTTP(clientConn *conn.Connection, req *http.Request) {
 
 	resp, err := proxy.doRequest(proxyEntity)
 	if err != nil {
-		fmt.Printf("%+v", errors.WithStack(err))
 		proxy.Error(clientConn, err)
 		return
 	}
@@ -180,6 +182,13 @@ func (proxy *Proxy) Error(net net.Conn, error error) {
 	proxy.delegate.ErrorLog(error)
 	_, _ = net.Write(internalServerErr)
 	if error != nil {
+		fmt.Printf("%+v", errors.WithStack(error))
 		_, _ = net.Write([]byte(error.Error()))
 	}
+}
+
+func installDeviceCert(rw http.ResponseWriter, req *http.Request) {
+	rw.Header().Add("Connection", "close")
+	rw.Header().Add("Content-Type", "application/x-x509-ca-cert")
+	rw.Write(cert.GetCaCert())
 }
