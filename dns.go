@@ -6,12 +6,12 @@ import (
 
 type Dns struct {
 	SslCertHost string
-	records map[string]string
+	records     map[string]string
 }
 
 var DefaultDns = Dns{
-	SslCertHost: "goiyov",
-	records: make(map[string]string),
+	SslCertHost: "goiyov.io",
+	records:     make(map[string]string),
 }
 
 // 添加DNS映射
