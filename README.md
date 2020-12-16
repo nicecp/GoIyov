@@ -26,6 +26,24 @@ $ go run main.go [-cert]
 ```
 
 #### 使用说明
+```go
+func (proxy *Proxy) New() *Proxy
+```
+New 生成代理类
+
+```go
+type Delegate interface {
+	BeforeRequest(entity *entity.Entity)
+	BeforeResponse(entity *entity.Entity, err error)
+	ErrorLog(err error)
+}
+func (proxy *Proxy) NewWithDelegate(delegate Delegate) *Proxy
+```
+NewWithDelegate 生成代理类，支持MITM事件处理
+```go
+func (proxy *Proxy) AddDnsRecord(host,remote string)
+```
+AddDnsRecord 将host解析至remote地址
 ##### 代理
 ```go
 package main
@@ -37,6 +55,8 @@ import (
 
 func main() {
 	proxy := GoIyov.New()
+	// 添加自定义DNS
+	proxy.AddDnsRecord("localhost-x","127.0.0.1")
 	server := &http.Server{
 		Addr:         ":8888",
 		Handler:	  http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
@@ -50,11 +70,6 @@ func main() {
 		panic(err)
 	}
 }
-```
-
-##### 自定义DNS
-```go
-proxy.AddDnsRecords(map[string]string{"localhost-x":"127.0.0.1"})
 ```
 ##### MITM(中间人攻击)
 ```go
