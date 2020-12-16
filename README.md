@@ -17,10 +17,15 @@ golang 代理
 * Certificate缓存
 * Statistic统计(开发中)
 
-#### 使用说明
 ![软件结构图](docs/GoIyov.jpg)
-> ***双击 `cert/caRoot.crt`根证书文件，并信任该证书***
 
+#### 证书安装
+```
+$ go run main.go [-cert]
+    -cert 安装服务端证书，支持MacOS(需root权限)/Windows系统
+```
+
+#### 使用说明
 ##### 代理
 ```go
 package main
@@ -91,3 +96,8 @@ func main() {
 	}
 }
 ```
+##### 移动端如何调试
+请确保手机及电脑连接同一个局域网，并将移动设备HTTP代理设置为本机`IP:PORT`
+1. 浏览器打开 `goiyov.io/ssl`
+2. 安装并信任证书
+> 建议使用`MITM`特性，以便查看明文内容
