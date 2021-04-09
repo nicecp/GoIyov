@@ -6,7 +6,7 @@ golang 代理
 
 #### 安装教程
 ```bash
- go get -u github/nicecp/GoIyov
+ go get -u github.com/nicecp/GoIyov
 ```
 
 #### 支持特性
